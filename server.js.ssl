@@ -5,8 +5,6 @@ const options = {
   key: fs.readFileSync('cert/server.key'),
   cert: fs.readFileSync('cert/oscorp.tech.crt'),
   port: 8000,
-  host: '127.0.0.1',
-  path: 'oscorp.tech:8000',
 };
 
 https.createServer(options, (req, res) => {
