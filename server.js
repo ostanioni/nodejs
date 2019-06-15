@@ -1,24 +1,35 @@
-const https = require('https');
-const fs = require('fs');
-const WebSocket = require('ws');
+var _ = require('lodash'),
+    util = require('util');
 
-const server = https.createServer({
-  key: fs.readFileSync('cert/server.key'),
-  cert: fs.readFileSync('cert/oscorp.tech.crt'),
-});
+function interceptStdout(callback) {
+ var old_stdout_write = process.stdout.write,
+     old_console_error = console.error;
 
-const wss = new WebSocket.Server({ server });
-wss.on('connection', function connection(ws) {
- ws.on('message', function incoming(message) {
-   console.log('received: %s', message);
- });
+ process.stdout.write = (function(write) {
+   return function(string, encoding, fd) {
+     var args = _.toArray(arguments);
+     write.apply(process.stdout, args);
 
- ws.send('something');
-});
-server.listen(7777);
+     // only intercept the string
+     callback.call(callback, string);
+   };
+ }(process.stdout.write));
 
+ console.error = (function(log) {
+   return function() {
+     var args = _.toArray(arguments);
+     args.unshift('[ERROR]');
+     console.log.apply(console.log, args);
+     
+     // string here encapsulates all the args
+     callback.call(callback, util.format(args));
+   };
+ }(console.error));
 
-// https.createServer(options, (req, res) => {
-//   res.writeHead(200);
-//   res.end('hello world\n');
-// }).listen(8000);
+ // puts back to original
+ const unhook = ()=>{
+  process.stdout.write = old_stdout_write;
+  console.error = old_console_error;
+ };
+ setTimeout(10000, unhook)
+};
